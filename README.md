@@ -5,6 +5,7 @@ tl;dr this is [meshview](https://github.com/pablorevilla-meshtastic/meshview) bu
 ## What's different
 
 - Landed [vidplace7's PR](https://github.com/pablorevilla-meshtastic/meshview/pull/25) to improve the containerfile/dockerfile and general container practices
+- Landed [mangelajo's PR](https://github.com/pablorevilla-meshtastic/meshview/pull/28) to improve dependency management and build processes
 - Added automation to publish builds
 
 ## Run with docker-compose
