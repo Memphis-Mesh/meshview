@@ -5,3 +5,6 @@ packets.db
 /table_details.py
 config.ini
 screenshots/*
+.aider*
+.env
+*.egg-info
