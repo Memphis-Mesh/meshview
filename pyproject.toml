@@ -93,3 +93,15 @@ meshview = ["templates/*", "*.png"]
 
 [tool.setuptools.package-dir]
 "" = "."
+
+[dependency-groups]
+dev = [
+    "ruff>=0.12.8",
+]
+
+[tool.ruff]
+# Exclude a variety of commonly ignored directories.
+exclude = [
+    "meshtastic",
+    "meshtastic-python",
+]

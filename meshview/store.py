@@ -284,7 +284,7 @@ async def get_nodes(role=None, channel=None, hw_model=None, days_active=None):
             nodes = result.scalars().all()
             return nodes  # Return the list of nodes
 
-    except Exception as e:
+    except Exception:
         print("error reading DB")  # Consider using logging instead of print
         return []  # Return an empty list in case of failure
 

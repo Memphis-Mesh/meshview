@@ -246,7 +246,7 @@ async def node_search(request):
 
 @routes.get("/node_match")
 async def node_match(request):
-    if not "q" in request.query or not request.query["q"]:
+    if "q" not in request.query or not request.query["q"]:
         return web.Response(text="Bad node id")
     raw_node_id = request.query["q"]
     node_options = await store.get_fuzzy_nodes(raw_node_id)
@@ -315,7 +315,7 @@ async def packet_list(request):
     except asyncio.CancelledError:
         raise  # Let TaskGroup cancellation propagate correctly
 
-    except Exception as e:
+    except Exception:
         # Log full traceback for diagnostics
         traceback.print_exc()
         return web.Response(status=500, text="Internal server error")
@@ -380,7 +380,7 @@ async def packet_details(request):
 
 
 @routes.get("/firehose")
-async def packet_details(request):
+async def firehouse_packet_details(request):
     portnum = request.query.get("portnum")
     if portnum:
         portnum = int(portnum)
@@ -439,7 +439,6 @@ async def packet(request):
     if not packet:
         return web.Response(status=404)
 
-    node = await store.get_node(packet.from_node_id)
     template = env.get_template("packet_index.html")
 
     return web.Response(
@@ -571,7 +570,6 @@ async def graph_telemetry_json(node_id, payload_type, graph_config):
 @routes.get("/graph/neighbors_json/{node_id}")
 async def graph_neighbors_json(request):
     import datetime
-    from pandas import DataFrame
 
     node_id = int(request.match_info['node_id'])
     oldest = datetime.datetime.now() - datetime.timedelta(days=4)
@@ -735,9 +733,6 @@ async def graph_traceroute2(request):
     async with asyncio.TaskGroup() as tg:
         for node_id in node_ids:
             nodes[node_id] = tg.create_task(store.get_node(node_id))
-
-    # Initialize graph for traceroute
-    graph = pydot.Dot('traceroute', graph_type="digraph")
 
     paths = set()
     node_color = {}
@@ -964,19 +959,9 @@ async def graph_network(request):
             href=f"/graph/network?root={node_id}&amp;depth={depth - 1}",
         ))
 
-    if edges:
-        max_edge_count = edges.most_common(1)[0][1]
-    else:
-        max_edge_count = 1
-
-    size_ratio = 2. / max_edge_count
-
-
     edge_added = set()
 
     for (src, dest), edge_count in edges.items():
-        size = max(size_ratio * edge_count, .25)
-        arrowsize = max(size_ratio * edge_count, .5)
         if edge_type[(src, dest)] in ('ni'):
             color = '#FF0000'
         elif  edge_type[(src, dest)] in ('sni'):
@@ -1021,7 +1006,7 @@ async def nodelist(request):
             ),
             content_type="text/html",
         )
-    except Exception as e:
+    except Exception:
 
         return web.Response(
             text="An error occurred while processing your request.",
@@ -1061,7 +1046,7 @@ async def api_nodes(request):
         )
 
 @routes.get("/api2/packets")
-async def api_packets(request):
+async def api_2_packets(request):
     try:
         node_id = request.query.get("node_id")
         packets = await store.get_packets(node_id)
@@ -1126,10 +1111,10 @@ async def net(request):
             content_type="text/html",
         )
 
-    except web.HTTPException as e:
+    except web.HTTPException:
         raise  # Let aiohttp handle HTTP exceptions properly
 
-    except Exception as e:
+    except Exception:
         print("Error processing net request")
         return web.Response(
             text="An internal server error occurred.",
@@ -1159,7 +1144,7 @@ async def map(request):
                 SOFTWARE_RELEASE=SOFTWARE_RELEASE),
             content_type="text/html",
         )
-    except Exception as e:
+    except Exception:
         return web.Response(
             text="An error occurred while processing your request.",
             status=500,
@@ -1465,62 +1450,6 @@ async def api_chat(request):
         print("Error in /api/chat:", e)
         return web.json_response({"error": "Failed to fetch chat data"}, status=500)
 
-
-# Client to pass ?hours=1 or ?days=7 to filter
-
-@routes.get("/api/nodes")
-async def api_nodes(request):
-    try:
-        # Query params
-        hours = request.query.get("hours")
-        days = request.query.get("days")
-        last_seen_after = None
-
-        # Determine cutoff time
-        if hours:
-            try:
-                last_seen_after = datetime.datetime.now() - datetime.timedelta(hours=int(hours))
-            except ValueError:
-                pass
-        elif days:
-            try:
-                last_seen_after = datetime.datetime.now() - datetime.timedelta(days=int(days))
-            except ValueError:
-                pass
-        else:
-            # Fallback: if a direct ISO timestamp is provided
-            last_seen_str = request.query.get("last_seen_after")
-            if last_seen_str:
-                try:
-                    last_seen_after = datetime.datetime.fromisoformat(last_seen_str)
-                except Exception as e:
-                    print(f"Failed to parse last_seen_after '{last_seen_str}': {e}")
-
-        # Fetch nodes
-        nodes = await store.get_nodes()
-
-        # Apply filter
-        if last_seen_after:
-            nodes = [n for n in nodes if n.last_seen and n.last_seen > last_seen_after]
-
-        # Prepare response
-        nodes_data = [{
-            "node_id": n.id,
-            "long_name": n.long_name,
-            "short_name": n.short_name,
-            "channel": n.channel,
-            "last_seen": n.last_seen.isoformat() if n.last_seen else None,
-            "last_lat": getattr(n, "last_lat", None),
-            "last_long": getattr(n, "last_long", None),
-            "hardware": n.hardware,
-            "firmware": n.firmware,
-            "role": n.role,
-        } for n in nodes]
-
-        return web.json_response({"nodes": nodes_data})
-    except Exception as e:
-        print("Error in /api/nodes:", e)
-        return web.json_response({"error": "Failed to fetch nodes"}, status=500)
 
 @routes.get("/api/packets")
 async def api_packets(request):

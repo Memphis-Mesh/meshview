@@ -1,9 +1,8 @@
 import datetime
 from sqlalchemy import select
-from sqlalchemy import update
 from meshtastic.protobuf.config_pb2 import Config
 from meshtastic.protobuf.portnums_pb2 import PortNum
-from meshtastic.protobuf.mesh_pb2 import User, HardwareModel
+from meshtastic.protobuf.mesh_pb2 import HardwareModel
 from meshview import mqtt_database
 from meshview import decode_payload
 from meshview.models import Packet, PacketSeen, Node, Traceroute

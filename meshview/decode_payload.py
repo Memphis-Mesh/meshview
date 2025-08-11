@@ -3,7 +3,6 @@ from meshtastic.protobuf.portnums_pb2 import PortNum
 from meshtastic.protobuf.mesh_pb2 import (
     Position,
     NeighborInfo,
-    NodeInfo,
     User,
     RouteDiscovery,
     Routing,
