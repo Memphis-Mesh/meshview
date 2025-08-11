@@ -7,3 +7,4 @@ config.ini
 screenshots/*
 .aider*
 .env
+*.egg-info

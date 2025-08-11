@@ -8,6 +8,10 @@ tl;dr this is [meshview](https://github.com/pablorevilla-meshtastic/meshview) bu
 - Landed [mangelajo's PR](https://github.com/pablorevilla-meshtastic/meshview/pull/28) to improve dependency management and build processes
 - Added automation to publish builds
 
+## Run on your host
+
+Install python3 and [uv](https://docs.astral.sh/uv/getting-started/installation/). Then, run `uv sync` to install dependencies. Copy `config.ini.example` and tweak its values to meet your needs. Finally, run `uv run meshview-run --config ./config.ini` and view the application in your web browser.
+
 ## Run with docker-compose
 
 Copy `.env.example` to `.env`:
@@ -28,10 +32,9 @@ Start compose in the background:
 docker compose up -d
 ```
 
+## Run with Kubernetes (k8s)
 
-## Run with kubernetes (k8s)
-
-Here is a helmfile example of deploying meshview:
+There are lots of variations on how to do this. For a reference, here is a helmfile example of deploying meshview:
 
 ```yaml
 ---
