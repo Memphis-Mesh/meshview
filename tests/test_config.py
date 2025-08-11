@@ -1,33 +1,26 @@
 import os
 import pytest
 from unittest.mock import patch
-import tempfile
 from meshview import config
 from importlib import reload
 
 
 @pytest.fixture
-def valid_config_file():
-    with tempfile.NamedTemporaryFile(mode="w", delete=False) as f:
-        f.write("""
-[database]
-connection_string = teststring
-
-[api]
-key = secret123
-timeout = 30
-""")
-        temp_path = f.name
-    yield temp_path
-    os.unlink(temp_path)
+def valid_config_file(request):
+    # Get the directory of the current test file
+    test_dir = os.path.dirname(request.fspath)
+    # Construct the path to the data file
+    data_file = os.path.join(test_dir, "test_config/good.ini")
+    return data_file
 
 
 @pytest.fixture
-def empty_config_file():
-    with tempfile.NamedTemporaryFile(mode="w", delete=False) as f:
-        temp_path = f.name
-    yield temp_path
-    os.unlink(temp_path)
+def empty_config_file(request):
+    # Get the directory of the current test file
+    test_dir = os.path.dirname(request.fspath)
+    # Construct the path to the data file
+    data_file = os.path.join(test_dir, "test_config/empty.ini")
+    return data_file
 
 
 def test_config_file_not_found():
@@ -52,6 +45,12 @@ def test_config_sections(valid_config_file):
         import meshview.config
 
         reload(meshview.config)
-        assert set(config.CONFIG.keys()) == {"database", "api"}
+        assert set(config.CONFIG.keys()) == {"mqtt", "site", "server", "database"}
         assert set(config.CONFIG["database"].keys()) == {"connection_string"}
-        assert set(config.CONFIG["api"].keys()) == {"key", "timeout"}
+        assert set(config.CONFIG["mqtt"].keys()) == {
+            "server",
+            "topics",
+            "port",
+            "username",
+            "password",
+        }
