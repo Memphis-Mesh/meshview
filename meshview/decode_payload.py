@@ -3,7 +3,6 @@ from meshtastic.protobuf.portnums_pb2 import PortNum
 from meshtastic.protobuf.mesh_pb2 import (
     Position,
     NeighborInfo,
-    NodeInfo,
     User,
     RouteDiscovery,
     Routing,
@@ -25,7 +24,7 @@ DECODE_MAP = {
     PortNum.TRACEROUTE_APP: RouteDiscovery.FromString,
     PortNum.ROUTING_APP: Routing.FromString,
     PortNum.TEXT_MESSAGE_APP: text_message,
-    PortNum.MAP_REPORT_APP: MapReport.FromString
+    PortNum.MAP_REPORT_APP: MapReport.FromString,
 }
 
 
