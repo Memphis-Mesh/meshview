@@ -6,3 +6,4 @@ packets.db
 config.ini
 screenshots/*
 .aider*
+.env
