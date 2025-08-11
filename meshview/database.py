@@ -23,10 +23,12 @@ def init_database(database_connection_string, read_only=False):
         kwargs["max_overflow"] = 50
 
     engine = create_async_engine(database_connection_string, **kwargs)
-    async_session = async_sessionmaker( bind=engine,
-    class_=AsyncSession,
-    expire_on_commit=False,
-)
+    async_session = async_sessionmaker(
+        bind=engine,
+        class_=AsyncSession,
+        expire_on_commit=False,
+    )
+
 
 async def create_tables():
     async with engine.begin() as conn:

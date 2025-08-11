@@ -48,20 +48,19 @@ async def get_packets(node_id=None, portnum=None, after=None, before=None, limit
         return packets
 
 
-
 async def get_packets_from(node_id=None, portnum=None, since=None, limit=500):
     async with database.async_session() as session:
         q = select(Packet)
 
         if node_id:
-            q = q.where(
-                Packet.from_node_id == node_id
-            )
+            q = q.where(Packet.from_node_id == node_id)
         if portnum:
             q = q.where(Packet.portnum == portnum)
         if since:
             q = q.where(Packet.import_time > (datetime.datetime.now() - since))
-        result = await session.execute(q.limit(limit).order_by(Packet.import_time.desc()))
+        result = await session.execute(
+            q.limit(limit).order_by(Packet.import_time.desc())
+        )
         return result.scalars()
 
 
@@ -74,7 +73,13 @@ async def get_packet(packet_id):
 
 async def get_uplinked_packets(node_id, portnum=None):
     async with database.async_session() as session:
-        q = select(Packet).join(PacketSeen).where(PacketSeen.node_id == node_id).order_by(Packet.import_time.desc()).limit(500)
+        q = (
+            select(Packet)
+            .join(PacketSeen)
+            .where(PacketSeen.node_id == node_id)
+            .order_by(Packet.import_time.desc())
+            .limit(500)
+        )
         if portnum:
             q = q.where(Packet.portnum == portnum)
         result = await session.execute(q)
@@ -94,18 +99,20 @@ async def get_packets_seen(packet_id):
 async def has_packets(node_id, portnum):
     async with database.async_session() as session:
         return bool(
-            (await session.execute(
+            (
+                await session.execute(
                     select(Packet.id).where(Packet.from_node_id == node_id).limit(1)
-            )).scalar()
+                )
+            ).scalar()
         )
 
 
 async def get_traceroute(packet_id):
     async with database.async_session() as session:
         result = await session.execute(
-                select(Traceroute)
-                .where(Traceroute.packet_id == packet_id)
-                .order_by(Traceroute.import_time)
+            select(Traceroute)
+            .where(Traceroute.packet_id == packet_id)
+            .order_by(Traceroute.import_time)
         )
         return result.scalars()
 
@@ -113,17 +120,18 @@ async def get_traceroute(packet_id):
 async def get_traceroutes(since):
     async with database.async_session() as session:
         result = await session.execute(
-                select(Traceroute)
-                .join(Packet)
-                .where(Traceroute.import_time > (datetime.datetime.now() - since))
-                .order_by(Traceroute.import_time)
+            select(Traceroute)
+            .join(Packet)
+            .where(Traceroute.import_time > (datetime.datetime.now() - since))
+            .order_by(Traceroute.import_time)
         )
         return result.scalars()
 
 
 async def get_mqtt_neighbors(since):
     async with database.async_session() as session:
-        result = await session.execute(select(PacketSeen, Packet)
+        result = await session.execute(
+            select(PacketSeen, Packet)
             .join(Packet)
             .where(
                 (PacketSeen.hop_limit == PacketSeen.hop_start)
@@ -146,13 +154,15 @@ async def get_total_packet_count():
         result = await session.execute(q)
         return result.scalar()  # Return the total count of packets
 
+
 # We count the total amount of seen packets
 async def get_total_packet_seen_count():
     async with database.async_session() as session:
-        q = select(func.count(PacketSeen.node_id))  # Use SQLAlchemy's func to count nodes
+        q = select(
+            func.count(PacketSeen.node_id)
+        )  # Use SQLAlchemy's func to count nodes
         result = await session.execute(q)
         return result.scalar()  # Return the` total count of seen packets
-
 
 
 async def get_total_node_count(channel: str = None) -> int:
@@ -175,7 +185,8 @@ async def get_total_node_count(channel: str = None) -> int:
 async def get_top_traffic_nodes():
     try:
         async with database.async_session() as session:
-            result = await session.execute(text("""
+            result = await session.execute(
+                text("""
                 SELECT 
                     n.node_id,
                     n.long_name,
@@ -190,24 +201,27 @@ async def get_top_traffic_nodes():
                 GROUP BY n.node_id, n.long_name, n.short_name
                 HAVING total_packets_sent > 0
                 ORDER BY total_times_seen DESC;
-            """))
+            """)
+            )
 
             rows = result.fetchall()
 
-            nodes = [{
-                'node_id': row[0],
-                'long_name': row[1],
-                'short_name': row[2],
-                'channel': row[3],
-                'total_packets_sent': row[4],
-                'total_times_seen': row[5]
-            } for row in rows]
+            nodes = [
+                {
+                    "node_id": row[0],
+                    "long_name": row[1],
+                    "short_name": row[2],
+                    "channel": row[3],
+                    "total_packets_sent": row[4],
+                    "total_times_seen": row[5],
+                }
+                for row in rows
+            ]
             return nodes
 
     except Exception as e:
         print(f"Error retrieving top traffic nodes: {str(e)}")
         return []
-
 
 
 async def get_node_traffic(node_id: int):
@@ -224,15 +238,19 @@ async def get_node_traffic(node_id: int):
                     AND packet.import_time >= DATETIME('now', 'localtime', '-24 hours') 
                     GROUP BY packet.portnum
                     ORDER BY packet_count DESC;
-                """), {"node_id": node_id}
+                """),
+                {"node_id": node_id},
             )
 
             # Map the result to include node.long_name and packet data
-            traffic_data = [{
-                "long_name": row[0],  # node.long_name
-                "portnum": row[1],    # packet.portnum
-                "packet_count": row[2]  # COUNT(*) as packet_count
-            } for row in result.all()]
+            traffic_data = [
+                {
+                    "long_name": row[0],  # node.long_name
+                    "portnum": row[1],  # packet.portnum
+                    "packet_count": row[2],  # COUNT(*) as packet_count
+                }
+                for row in result.all()
+            ]
 
             return traffic_data
 
@@ -240,7 +258,6 @@ async def get_node_traffic(node_id: int):
         # Log the error or handle it as needed
         print(f"Error fetching node traffic: {str(e)}")
         return []
-
 
 
 async def get_nodes(role=None, channel=None, hw_model=None, days_active=None):
@@ -257,21 +274,26 @@ async def get_nodes(role=None, channel=None, hw_model=None, days_active=None):
     """
     try:
         async with database.async_session() as session:
-            #print(channel)  # Debugging output (consider replacing with logging)
+            # print(channel)  # Debugging output (consider replacing with logging)
 
             # Start with a base query selecting all nodes
             query = select(Node)
 
             # Apply filters based on provided parameters
             if role is not None:
-                query = query.where(Node.role == role.upper())  # Ensure role is uppercase
+                query = query.where(
+                    Node.role == role.upper()
+                )  # Ensure role is uppercase
             if channel is not None:
                 query = query.where(Node.channel == channel)
             if hw_model is not None:
                 query = query.where(Node.hw_model == hw_model)
 
             if days_active is not None:
-                query = query.where(Node.last_update > datetime.datetime.now() - datetime.timedelta(days_active))
+                query = query.where(
+                    Node.last_update
+                    > datetime.datetime.now() - datetime.timedelta(days_active)
+                )
 
             # Exclude nodes where last_update is an empty string
             query = query.where(Node.last_update != "")
@@ -287,4 +309,3 @@ async def get_nodes(role=None, channel=None, hw_model=None, days_active=None):
     except Exception:
         print("error reading DB")  # Consider using logging instead of print
         return []  # Return an empty list in case of failure
-

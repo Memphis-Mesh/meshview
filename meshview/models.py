@@ -8,6 +8,7 @@ from sqlalchemy import ForeignKey, BigInteger
 class Base(AsyncAttrs, DeclarativeBase):
     pass
 
+
 # Node
 class Node(Base):
     __tablename__ = "node"
@@ -31,6 +32,7 @@ class Node(Base):
             if column.name != "last_update"  # Exclude last_update
         }
 
+
 class Packet(Base):
     __tablename__ = "packet"
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
@@ -39,9 +41,11 @@ class Packet(Base):
     from_node: Mapped["Node"] = relationship(
         primaryjoin="Packet.from_node_id == foreign(Node.node_id)", lazy="joined"
     )
-    to_node_id: Mapped[int] = mapped_column(BigInteger,nullable=True)
+    to_node_id: Mapped[int] = mapped_column(BigInteger, nullable=True)
     to_node: Mapped["Node"] = relationship(
-        primaryjoin="Packet.to_node_id == foreign(Node.node_id)", lazy="joined", overlaps="from_node"
+        primaryjoin="Packet.to_node_id == foreign(Node.node_id)",
+        lazy="joined",
+        overlaps="from_node",
     )
     payload: Mapped[bytes] = mapped_column(nullable=True)
     import_time: Mapped[datetime] = mapped_column(nullable=True)
@@ -53,7 +57,9 @@ class PacketSeen(Base):
     packet_id = mapped_column(ForeignKey("packet.id"), primary_key=True)
     node_id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     node: Mapped["Node"] = relationship(
-        lazy="joined", primaryjoin="PacketSeen.node_id == foreign(Node.node_id)", overlaps="from_node,to_node"
+        lazy="joined",
+        primaryjoin="PacketSeen.node_id == foreign(Node.node_id)",
+        overlaps="from_node,to_node",
     )
     rx_time: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     hop_limit: Mapped[int] = mapped_column(nullable=True)

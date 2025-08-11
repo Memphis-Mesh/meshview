@@ -36,10 +36,12 @@ def create_event(node_id):
 def remove_event(node_event):
     waiting_node_ids_events[node_event.node_id].remove(node_event)
 
+
 def notify_packet(node_id, packet):
     for event in waiting_node_ids_events[node_id]:
         event.packets.append(packet)
         event.set()
+
 
 def notify_uplinked(node_id, packet):
     for event in waiting_node_ids_events[node_id]:
