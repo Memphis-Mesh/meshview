@@ -47,7 +47,6 @@
 
 <script>
     var map = L.map('map');
-
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
         attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -122,12 +121,11 @@ var nodes = [
         return color;
     }
 
-    nodes.forEach(function(node) {
-        if (node.lat !== null && node.long !== null) {
-            let category = node.channel;
-            let isRouter = node.isRouter === "True"; // Convert from string
-
-            channels.add(category);
+        nodes.forEach(function(node) {
+            if (node.lat !== null && node.long !== null) {
+                let category = node.channel;
+                let isRouter = node.isRouter === "True"; // Convert from string
+                channels.add(category);
 
             let color = hashToColor(category);
 

@@ -109,7 +109,7 @@ async def process_envelope(topic, env):
                 user = decode_payload.decode_payload(PortNum.NODEINFO_APP, env.packet.decoded.payload)
                 if user and user.id:
                     node_id = int(user.id[1:], 16) if user.id[0] == "!" else None
-                    hw_model = HardwareModel.Name(user.hw_model) if hasattr(HardwareModel, 'Name') else "unknown"
+                    hw_model = HardwareModel.Name(user.hw_model) if user.hw_model in HardwareModel.values() else f"unknown({user.hw_model})"
                     role = Config.DeviceConfig.Role.Name(user.role) if hasattr(Config.DeviceConfig.Role,
                                                                                'Name') else "unknown"
 

@@ -125,7 +125,7 @@ tr:nth-child(odd) {
                             <td class="long_name"> <a href="/packet_list/{{ node.node_id }}">{{ node.long_name }}</a></td>
                             <td class="short_name">{{ node.short_name }}</td>
                             <td class="hw_model">{{ node.hw_model if node.hw_model else "N/A" }}</td>
-                            <td class="firmware">{{ node.firmware }}</td>
+                            <td class="firmware">{{ node.firmware if node.firmware else "N/A" }}</td>
                             <td class="role">{{ node.role if node.role else "N/A" }}</td>
                             <td class="last_lat">{{ "{:.7f}".format(node.last_lat / 10**7) if node.last_lat else "N/A" }}</td>
                             <td class="last_long">{{ "{:.7f}".format(node.last_long / 10**7) if node.last_long else "N/A" }}</td>

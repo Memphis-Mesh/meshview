@@ -6,6 +6,8 @@
         margin: 0 auto;
     }
 
+    /* Removed .packet-fade-in animation CSS */
+    /*
     .packet-fade-in {
         animation: fadeIn 0.5s ease forwards;
         opacity: 0;
@@ -16,6 +18,7 @@
             opacity: 1;
         }
     }
+    */
 
     #pause-button {
         white-space: nowrap;
@@ -66,18 +69,12 @@ function fetchUpdates() {
         .then(res => res.json())
         .then(data => {
             if (data.packets && data.packets.length > 0) {
-                lastTime = data.latest_import_time;
+                lastTime = data.last_time;
                 const list = document.getElementById("packet_list");
 
                 for (const html of data.packets.reverse()) {
                     list.insertAdjacentHTML("afterbegin", html);
-                    const firstChild = list.firstElementChild;
-                    if (firstChild) {
-                        firstChild.classList.add("packet-fade-in");
-                        firstChild.addEventListener("animationend", () => {
-                            firstChild.classList.remove("packet-fade-in");
-                        }, { once: true });
-                    }
+                    // No animation here anymore
                 }
             }
         })
@@ -89,12 +86,16 @@ function fetchUpdates() {
 document.addEventListener("DOMContentLoaded", () => {
     const pauseBtn = document.getElementById("pause-button");
 
-    document.querySelector('select[name="portnum"]').addEventListener("change", (e) => {
-        const selected = e.target.value;
-        const url = new URL(window.location.href);
-        url.searchParams.set("portnum", selected);
-        window.location.href = url;
-    });
+    // Assuming you have a portnum selector somewhere (not shown in your snippet)
+    const portnumSelector = document.querySelector('select[name="portnum"]');
+    if (portnumSelector) {
+        portnumSelector.addEventListener("change", (e) => {
+            const selected = e.target.value;
+            const url = new URL(window.location.href);
+            url.searchParams.set("portnum", selected);
+            window.location.href = url;
+        });
+    }
 
     pauseBtn.addEventListener("click", () => {
         updatesPaused = !updatesPaused;

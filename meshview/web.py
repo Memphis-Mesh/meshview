@@ -23,7 +23,7 @@ import re
 import traceback
 
 SEQ_REGEX = re.compile(r"seq \d+")
-SOFTWARE_RELEASE= "2.0.3.06-12-25"
+SOFTWARE_RELEASE= "2.0.3.08-06-25"
 CONFIG = config.CONFIG
 
 env = Environment(loader=PackageLoader("meshview"), autoescape=select_autoescape())
@@ -164,7 +164,7 @@ def node_id_to_hex(node_id):
     if node_id == 4294967295:
         return "^all"
     else:
-        return f"!{hex(node_id)[2:]}"
+        return f"!{hex(node_id)[2:].zfill(8)}"
 
 
 def format_timestamp(timestamp):
@@ -321,29 +321,6 @@ async def packet_list(request):
         return web.Response(status=500, text="Internal server error")
 
 
-
-@routes.get("/packet_list_text/{node_id}")
-async def packet_list_text(request):
-    node_id = int(request.match_info["node_id"])
-    portnum = int(request.query.get("portnum")) if request.query.get("portnum") else None
-
-    async with asyncio.TaskGroup() as tg:
-        raw_packets = tg.create_task(store.get_packets(node_id, portnum, limit=200))
-
-    packets = [Packet.from_model(p) for p in await raw_packets]  # Convert generator to a list
-
-    # Convert packets to a plain text format with formatted import time and raw payload
-    text_data = "\n\n----------------------\n\n".join(
-        f"{packet.import_time.strftime('%-I:%M:%S %p - %m-%d-%Y')}\n{packet.raw_payload}"
-        for packet in packets
-    )
-
-    return web.Response(
-        text=text_data,
-        content_type="text/plain",
-    )
-
-
 @routes.get("/packet_details/{packet_id}")
 async def packet_details(request):
     packet_id = int(request.match_info["packet_id"])
@@ -422,44 +399,32 @@ async def packet_details(request):
 @routes.get("/firehose/updates")
 async def firehose_updates(request):
     try:
-        last_time_str = request.query.get("last_time", None)
+        # Get `last_time` from query string
+        last_time_str = request.query.get("last_time")
+        last_time = None
         if last_time_str:
             try:
                 last_time = datetime.datetime.fromisoformat(last_time_str)
             except Exception as e:
                 print(f"Failed to parse last_time '{last_time_str}': {e}")
-                last_time = datetime.datetime.min
-        else:
-            last_time = datetime.datetime.min
+                last_time = None
 
-        portnum = request.query.get("portnum")
-        if portnum is not None and portnum != "":
-            portnum = int(portnum)
-        else:
-            portnum = None
+        # Query packets after last_time (microsecond precision)
+        packets = await store.get_packets(after=last_time, limit=10)
 
-        packets = await store.get_packets(
-            portnum=portnum,
-            limit=10,
-        )
+
+        # Convert to UI model
         ui_packets = [Packet.from_model(p) for p in packets]
 
-        # Filter packets newer than last_time
-        new_packets = [p for p in ui_packets if p.import_time > last_time]
-
+        # Render HTML using Jinja2 template
         template = env.get_template("packet.html")
-        # Replace YOUR_NODE_ID with your current node ID (integer)
-        YOUR_NODE_ID = 0x12345678  # example, replace with actual
+        rendered_packets = [template.render(packet=p) for p in ui_packets]
 
-        rendered_packets = [template.render(packet=p, node_id=YOUR_NODE_ID) for p in new_packets]
-
-        response = {
-            "packets": rendered_packets,
-        }
-
-        if new_packets:
-            latest_import_time = max(p.import_time for p in new_packets)
-            response["latest_import_time"] = latest_import_time.isoformat()
+        # Build response
+        response = {"packets": rendered_packets}
+        if ui_packets:
+            latest_import_time = max(p.import_time for p in ui_packets)
+            response["last_time"] = latest_import_time.isoformat()
 
         return web.json_response(response)
 
@@ -915,7 +880,7 @@ async def graph_network(request):
 
     for packet in await store.get_packets(
         portnum=PortNum.NEIGHBORINFO_APP,
-        since=since,
+        after=since,
     ):
         _, neighbor_info = decode_payload.decode(packet)
         node_ids.add(packet.from_node_id)
@@ -1095,7 +1060,7 @@ async def api_nodes(request):
             content_type="text/plain"
         )
 
-@routes.get("/api/packets")
+@routes.get("/api2/packets")
 async def api_packets(request):
     try:
         node_id = request.query.get("node_id")
@@ -1135,13 +1100,12 @@ async def api_packets(request):
 async def net(request):
     try:
         # Fetch packets for the given node ID and port number
+        after_time = datetime.datetime.now() - timedelta(days=6)
         packets = await store.get_packets(
-            node_id=0xFFFFFFFF, portnum=PortNum.TEXT_MESSAGE_APP, since=timedelta(days=3)
-        )
+            portnum=PortNum.TEXT_MESSAGE_APP, after=after_time)
 
         # Convert packets to UI packets
         ui_packets = [Packet.from_model(p) for p in packets]
-
         # Precompile regex for performance
         seq_pattern = re.compile(r"seq \d+$")
 
@@ -1367,7 +1331,7 @@ async def nodegraph(request):
             used_nodes.add(path[i + 1])  # Add all nodes in the traceroute path
 
     # Fetch NeighborInfo packets
-    for packet in await store.get_packets(portnum=PortNum.NEIGHBORINFO_APP, since=since):
+    for packet in await store.get_packets(portnum=PortNum.NEIGHBORINFO_APP, after=since):
         try:
             _, neighbor_info = decode_payload.decode(packet)
             node_ids.add(packet.from_node_id)
@@ -1430,6 +1394,179 @@ async def get_config(request):
 
     except (json.JSONDecodeError, TypeError):
         return web.json_response({"error": "Invalid configuration format"}, status=500)
+
+# API Section
+#######################################################################
+# How this works
+# When your frontend calls /api/chat without since, it returns the most recent limit (default 100) messages.
+# When your frontend calls /api/chat?since=ISO_TIMESTAMP, it returns only messages with import_time > since.
+# The response includes "latest_import_time" for frontend to keep track of the newest message timestamp.
+# The backend fetches extra packets (limit*5) to account for filtering messages like "seq N" and since filtering.
+
+@routes.get("/api/chat")
+async def api_chat(request):
+    try:
+        # Parse query params
+        limit_str = request.query.get("limit", "100")
+        since_str = request.query.get("since", None)
+
+        try:
+            limit = min(max(int(limit_str), 1), 200)  # Limit between 1 and 200
+        except ValueError:
+            limit = 100
+
+        if since_str:
+            try:
+                since = datetime.datetime.fromisoformat(since_str)
+            except Exception as e:
+                print(f"Failed to parse since '{since_str}': {e}")
+                since = None
+        else:
+            since = None
+
+        # Fetch packets from store
+        packets = await store.get_packets(
+            node_id=0xFFFFFFFF,
+            portnum=PortNum.TEXT_MESSAGE_APP,
+            limit=limit*5,  # Fetch extra to filter out seq messages and since filter
+        )
+
+        SEQ_REGEX = re.compile(r"seq \d+")
+        ui_packets = [Packet.from_model(p) for p in packets]
+        filtered_packets = [p for p in ui_packets if p.payload and not SEQ_REGEX.fullmatch(p.payload)]
+
+        # Filter by 'since' timestamp if provided
+        if since:
+            filtered_packets = [p for p in filtered_packets if p.import_time > since]
+
+        # Sort by import_time descending (latest first)
+        filtered_packets.sort(key=lambda p: p.import_time, reverse=True)
+
+        # Trim to requested limit
+        filtered_packets = filtered_packets[:limit]
+
+        packets_data = [{
+            "id": p.id,
+            "import_time": p.import_time.isoformat(),
+            "channel": getattr(p.from_node, "channel", ""),
+            "from_node_id": p.from_node_id,
+            "long_name": getattr(p.from_node, "long_name", ""),
+            "payload": p.payload,
+        } for p in filtered_packets]
+
+        latest_import_time = filtered_packets[0].import_time.isoformat() if filtered_packets else since_str or None
+
+        return web.json_response({
+            "packets": packets_data,
+            "latest_import_time": latest_import_time,
+        })
+
+    except Exception as e:
+        print("Error in /api/chat:", e)
+        return web.json_response({"error": "Failed to fetch chat data"}, status=500)
+
+
+# Client to pass ?hours=1 or ?days=7 to filter
+
+@routes.get("/api/nodes")
+async def api_nodes(request):
+    try:
+        # Query params
+        hours = request.query.get("hours")
+        days = request.query.get("days")
+        last_seen_after = None
+
+        # Determine cutoff time
+        if hours:
+            try:
+                last_seen_after = datetime.datetime.now() - datetime.timedelta(hours=int(hours))
+            except ValueError:
+                pass
+        elif days:
+            try:
+                last_seen_after = datetime.datetime.now() - datetime.timedelta(days=int(days))
+            except ValueError:
+                pass
+        else:
+            # Fallback: if a direct ISO timestamp is provided
+            last_seen_str = request.query.get("last_seen_after")
+            if last_seen_str:
+                try:
+                    last_seen_after = datetime.datetime.fromisoformat(last_seen_str)
+                except Exception as e:
+                    print(f"Failed to parse last_seen_after '{last_seen_str}': {e}")
+
+        # Fetch nodes
+        nodes = await store.get_nodes()
+
+        # Apply filter
+        if last_seen_after:
+            nodes = [n for n in nodes if n.last_seen and n.last_seen > last_seen_after]
+
+        # Prepare response
+        nodes_data = [{
+            "node_id": n.id,
+            "long_name": n.long_name,
+            "short_name": n.short_name,
+            "channel": n.channel,
+            "last_seen": n.last_seen.isoformat() if n.last_seen else None,
+            "last_lat": getattr(n, "last_lat", None),
+            "last_long": getattr(n, "last_long", None),
+            "hardware": n.hardware,
+            "firmware": n.firmware,
+            "role": n.role,
+        } for n in nodes]
+
+        return web.json_response({"nodes": nodes_data})
+    except Exception as e:
+        print("Error in /api/nodes:", e)
+        return web.json_response({"error": "Failed to fetch nodes"}, status=500)
+
+@routes.get("/api/packets")
+async def api_packets(request):
+    try:
+        # Query parameters
+        limit = int(request.query.get("limit", 200))
+        since_str = request.query.get("since")
+        since_time = None
+
+        # Parse 'since' timestamp if provided
+        if since_str:
+            try:
+                since_time = datetime.datetime.fromisoformat(since_str)
+            except Exception as e:
+                print(f"Failed to parse 'since' timestamp '{since_str}': {e}")
+
+        # Fetch last N packets
+        packets = await store.get_packets(
+            node_id=0xFFFFFFFF,
+            portnum=None,
+            limit=limit
+        )
+        packets = [Packet.from_model(p) for p in packets]
+
+        # Apply "since" filter
+        if since_time:
+            packets = [p for p in packets if p.import_time > since_time]
+
+        # Build JSON response (no raw_payload)
+        packets_json = [{
+            "id": p.id,
+            "from_node_id": p.from_node_id,
+            "to_node_id": p.to_node_id,
+            "portnum": int(p.portnum),
+            "import_time": p.import_time.isoformat(),
+            "payload": p.payload
+        } for p in packets]
+
+        return web.json_response({"packets": packets_json})
+
+    except Exception as e:
+        print("Error in /api/packets:", str(e))
+        return web.json_response(
+            {"error": "Failed to fetch packets"},
+            status=500
+        )
 
 
 async def run_server():

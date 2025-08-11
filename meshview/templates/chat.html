@@ -15,12 +15,10 @@
 .chat-packet:nth-of-type(even) {
     background-color: #333333;
 }
-
 @keyframes flash {
     0% { background-color: #ffe066; }
     100% { background-color: inherit; }
 }
-
 .chat-packet.flash {
     animation: flash 3.5s ease-out;
 }
@@ -43,7 +41,7 @@
                 <a href="/packet/{{ packet.id }}" title="View packet details">✉️</a>
                 {{ packet.from_node.channel }}
             </span>
-            <span class="col-2 username">
+            <span class="col-3 username">
                 <a href="/packet_list/{{ packet.from_node_id }}" title="View all packets from this node">
                     {{ packet.from_node.long_name or (packet.from_node_id | node_id_to_hex) }}
                 </a>
@@ -53,7 +51,7 @@
             </span>
         </div>
         {% else %}
-        No packets found.
+        <p class="text-muted">No packets found.</p>
         {% endfor %}
     </div>
 </div>
@@ -100,16 +98,25 @@ async function fetchUpdates() {
                 div.className = "row chat-packet flash";
                 div.dataset.packetId = packet.id;
 
+                const date = new Date(packet.import_time);
+                const formattedTime = date.toLocaleTimeString([], {
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+                const formattedDate = `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}/${date.getFullYear()}`;
+                const formattedTimestamp = `${formattedTime} - ${formattedDate}`;
+
                 div.innerHTML = `
                     <span class="col-2 timestamp" title="${packet.import_time}">
-                        ${new Date(packet.import_time).toLocaleString()}
+                        ${formattedTimestamp}
                     </span>
                     <span class="col-2 channel">
                         <a href="/packet/${packet.id}" title="View packet details">✉️</a> ${packet.channel}
                     </span>
-                    <span class="col-2 username">
+                    <span class="col-3 username">
                         <a href="/packet_list/${packet.from_node_id}" title="View all packets from this node">
-                            ${packet.long_name ? packet.long_name : parseInt(packet.from_node_id).toString(16)}
+                            ${packet.long_name || (packet.from_node_id || '').toString(16)}
                         </a>
                     </span>
                     <span class="col-5 message">${escapeHtml(packet.payload)}</span>
@@ -128,6 +135,6 @@ async function fetchUpdates() {
     }
 }
 
-setInterval(fetchUpdates, 5000); // Poll every 5 seconds
+setInterval(fetchUpdates, 5000);
 </script>
 {% endblock %}
