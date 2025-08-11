@@ -9,9 +9,6 @@ description = "Real-time monitoring and diagnostic tool for Meshtastic mesh netw
 readme = "README.md"
 requires-python = ">=3.11"
 license = {file = "COPYING"}
-authors = [
-    {name = "Pablo Revilla", email = "pablorevilla-meshtastic@users.noreply.github.com"}
-]
 keywords = ["meshtastic", "mesh", "network", "visualization", "mqtt", "real-time", "monitoring"]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -27,6 +24,7 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
     "License :: OSI Approved",
     "Operating System :: OS Independent",
+    "Private :: Do Not Upload", # This project is not meant to be distributed via pypi, so mark this as private
 ]
 
 dependencies = [
@@ -82,10 +80,10 @@ meshview-run = "mvrun:main"
 meshview-startdb = "startdb:main_cli"
 
 [project.urls]
-Homepage = "https://github.com/pablorevilla-meshtastic/meshview"
-Repository = "https://github.com/pablorevilla-meshtastic/meshview"
-Issues = "https://github.com/pablorevilla-meshtastic/meshview/issues"
-Documentation = "https://github.com/pablorevilla-meshtastic/meshview#readme"
+Homepage = "https://github.com/memphis-mesh/meshview"
+Repository = "https://github.com/memphis-mesh/meshview"
+Issues = "https://github.com/memphis-mesh/meshview/issues"
+Documentation = "https://github.com/memphis-mesh/meshview#readme"
 
 [tool.setuptools.packages.find]
 include = ["meshview*"]
