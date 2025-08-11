@@ -4,9 +4,6 @@ from unittest.mock import patch
 import tempfile
 from meshview import config
 from importlib import reload
-from importlib import reload
-from importlib import reload
-from importlib import reload
 
 
 @pytest.fixture
