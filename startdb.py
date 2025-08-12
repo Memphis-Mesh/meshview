@@ -2,7 +2,7 @@ import asyncio
 import argparse
 import configparser
 from meshview import mqtt_reader
-from meshview import mqtt_database
+from meshview import database
 from meshview import mqtt_store
 import json
 
@@ -21,9 +21,9 @@ async def load_database_from_mqtt(
 
 
 async def main(config):
-    mqtt_database.init_database(config["database"]["connection_string"])
+    database.init_database(config["database"]["connection_string"])
 
-    await mqtt_database.create_tables()
+    await database.create_tables()
     mqtt_user = None
     mqtt_passwd = None
     if config["mqtt"]["username"] != "":
