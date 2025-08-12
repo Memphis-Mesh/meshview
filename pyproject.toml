@@ -96,6 +96,8 @@ meshview = ["templates/*", "*.png"]
 
 [dependency-groups]
 dev = [
+    "pytest>=8.4.1",
+    "pytest-cov>=6.2.1",
     "ruff>=0.12.8",
 ]
 
@@ -105,3 +107,6 @@ exclude = [
     "meshtastic",
     "meshtastic-python",
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
