@@ -2,7 +2,6 @@ import asyncio
 import datetime
 from datetime import timedelta
 import json
-import os
 import ssl
 from collections import Counter
 from dataclasses import dataclass
@@ -29,10 +28,7 @@ CONFIG = config.CONFIG
 env = Environment(loader=PackageLoader("meshview"), autoescape=select_autoescape())
 
 # Start Database
-database.init_database(CONFIG["database"]["connection_string"])
-
-with open(os.path.join(os.path.dirname(__file__), "1x1.png"), "rb") as png:
-    empty_png = png.read()
+database.init_database(CONFIG["database"]["connection_string"], True)
 
 
 @dataclass
@@ -198,23 +194,6 @@ routes = web.RouteTableDef()
 @routes.get("/")
 async def index(request):
     raise web.HTTPFound(location="/map")
-
-
-def generate_response(request, body, raw_node_id="", node=None):
-    if "HX-Request" in request.headers:
-        return web.Response(text=body, content_type="text/html")
-
-    template = env.get_template("index.html")
-    response = web.Response(
-        text=template.render(
-            is_hx_request="HX-Request" in request.headers,
-            raw_node_id=raw_node_id,
-            node_html=Markup(body),
-            node=node,
-        ),
-        content_type="text/html",
-    )
-    return response
 
 
 @routes.get("/node_search")
@@ -755,133 +734,6 @@ async def graph_traceroute(request):
     )
 
 
-@routes.get("/graph/traceroute2/{packet_id}")
-async def graph_traceroute2(request):
-    packet_id = int(request.match_info["packet_id"])
-    traceroutes = list(await store.get_traceroute(packet_id))
-
-    # Fetch the packet
-    packet = await store.get_packet(packet_id)
-    if not packet:
-        return web.Response(status=404)
-
-    node_ids = set()
-    for tr in traceroutes:
-        route = decode_payload.decode_payload(PortNum.TRACEROUTE_APP, tr.route)
-        node_ids.add(tr.gateway_node_id)
-        for node_id in route.route:
-            node_ids.add(node_id)
-    node_ids.add(packet.from_node_id)
-    node_ids.add(packet.to_node_id)
-
-    nodes = {}
-    async with asyncio.TaskGroup() as tg:
-        for node_id in node_ids:
-            nodes[node_id] = tg.create_task(store.get_node(node_id))
-
-    paths = set()
-    node_color = {}
-    mqtt_nodes = set()
-    saw_reply = set()
-    dest = None
-    node_seen_time = {}
-    for tr in traceroutes:
-        if tr.done:
-            saw_reply.add(tr.gateway_node_id)
-        if tr.done and dest:
-            continue
-        route = decode_payload.decode_payload(PortNum.TRACEROUTE_APP, tr.route)
-        path = [packet.from_node_id]
-        path.extend(route.route)
-        if tr.done:
-            dest = packet.to_node_id
-            path.append(packet.to_node_id)
-        elif path[-1] != tr.gateway_node_id:
-            path.append(tr.gateway_node_id)
-
-        if not tr.done and tr.gateway_node_id not in node_seen_time and tr.import_time:
-            node_seen_time[path[-1]] = tr.import_time
-
-        mqtt_nodes.add(tr.gateway_node_id)
-        node_color[path[-1]] = "#" + hex(hash(tuple(path)))[3:9]
-        paths.add(tuple(path))
-
-    used_nodes = set()
-    for path in paths:
-        used_nodes.update(path)
-
-    import_times = [tr.import_time for tr in traceroutes if tr.import_time]
-    if import_times:
-        first_time = min(import_times)
-    else:
-        first_time = 0
-
-    # Prepare data for ECharts rendering
-    chart_nodes = []
-    chart_edges = []
-    for node_id in used_nodes:
-        node = await nodes[node_id]
-        if not node:
-            # Handle case where node is None
-            node_name = node_id_to_hex(node_id)
-            chart_nodes.append(
-                {
-                    "name": str(node_id),
-                    "value": node_name,
-                    "symbol": "rect",
-                }
-            )
-        else:
-            node_name = f"[{node.short_name}] {node.long_name}\n{node_id_to_hex(node_id)}\n{node.role}"
-            if node_id in node_seen_time:
-                ms = (node_seen_time[node_id] - first_time).total_seconds() * 1000
-                node_name += f"\n {ms:.2f}ms"
-            style = "dashed"
-            if node_id == dest:
-                style = "filled"
-            elif node_id in mqtt_nodes:
-                style = "solid"
-
-            if node_id in saw_reply:
-                style += ", diagonals"
-
-            chart_nodes.append(
-                {
-                    "name": str(node_id),
-                    "value": node_name,
-                    "symbol": "rect",
-                    "long_name": node.long_name,
-                    "short_name": node.short_name,
-                    "role": node.role,
-                    "hw_model": node.hw_model,
-                }
-            )
-
-    # Create edges
-    for path in paths:
-        color = "#" + hex(hash(tuple(path)))[3:9]
-        for src, dest in zip(path, path[1:]):
-            chart_edges.append(
-                {
-                    "source": str(src),
-                    "target": str(dest),
-                    "originalColor": color,
-                }
-            )
-
-    chart_data = {
-        "nodes": chart_nodes,
-        "edges": chart_edges,
-    }
-
-    template = env.get_template("traceroute.html")
-    # Render the page with the chart data
-    return web.Response(
-        text=template.render(chart_data=chart_data, packet_id=packet_id),
-        content_type="text/html",
-    )
-
-
 @routes.get("/graph/network")
 async def graph_network(request):
     root = request.query.get("root")
@@ -1071,68 +923,6 @@ async def nodelist(request):
             text="An error occurred while processing your request.",
             status=500,
             content_type="text/plain",
-        )
-
-
-@routes.get("/api/nodes")
-async def api_nodes(request):
-    try:
-        # Extract optional query parameters
-        role = request.query.get("role")
-        channel = request.query.get("channel")
-        hw_model = request.query.get("hw_model")
-
-        # Fetch filtered nodes
-        nodes = await store.get_nodes(role, channel, hw_model)
-
-        # Convert node objects to dictionaries for JSON output
-        nodes_json = [node.to_dict() for node in nodes]
-
-        # Return a pretty-printed JSON response
-        return web.json_response(
-            {"nodes": nodes_json},
-            dumps=lambda obj: json.dumps(obj, indent=2),  # Pretty print for development
-        )
-
-    except Exception as e:
-        # Log error and stack trace to console
-        print("Error in /api endpoint:", str(e))
-
-        # Return a plain-text error response
-        return web.Response(
-            text=f"An error occurred: {str(e)}", status=500, content_type="text/plain"
-        )
-
-
-@routes.get("/api2/packets")
-async def api_2_packets(request):
-    try:
-        node_id = request.query.get("node_id")
-        packets = await store.get_packets(node_id)
-
-        packets_json = [
-            {
-                "id": packet.id,
-                "from_node_id": packet.from_node_id,
-                "from_node": packet.from_node.long_name if packet.from_node else None,
-                "to_node_id": packet.to_node_id,
-                "to_node": packet.to_node.long_name if packet.to_node else None,
-                "portnum": packet.portnum,
-                "payload": packet.payload,
-                "import_time": packet.import_time.isoformat(),
-            }
-            for packet in packets
-        ]
-
-        return web.json_response(
-            {"packets": packets_json}, dumps=lambda obj: json.dumps(obj, indent=2)
-        )
-
-    except Exception as e:
-        print("Error in /api/packets endpoint:", str(e))
-
-        return web.Response(
-            text=f"An error occurred: {str(e)}", status=500, content_type="text/plain"
         )
 
 
@@ -1438,30 +1228,6 @@ async def nodegraph(request):
     )
 
 
-# Show basic details about the site on the site
-@routes.get("/config")
-async def get_config(request):
-    try:
-        site = CONFIG.get("site", {})
-        mqtt = CONFIG.get("mqtt", {})
-
-        return web.json_response(
-            {
-                "Server": site.get("domain", ""),
-                "Title": site.get("title", ""),
-                "Message": site.get("message", ""),
-                "MQTT Server": mqtt.get("server", ""),
-                "Topics": json.loads(mqtt.get("topics", "[]")),
-                "Release": SOFTWARE_RELEASE,
-                "Time": datetime.datetime.now().isoformat(),
-            },
-            dumps=lambda obj: json.dumps(obj, indent=2),
-        )
-
-    except (json.JSONDecodeError, TypeError):
-        return web.json_response({"error": "Invalid configuration format"}, status=500)
-
-
 # API Section
 #######################################################################
 # How this works
@@ -1586,6 +1352,60 @@ async def api_packets(request):
     except Exception as e:
         print("Error in /api/packets:", str(e))
         return web.json_response({"error": "Failed to fetch packets"}, status=500)
+
+
+@routes.get("/api/nodes")
+async def api_nodes(request):
+    try:
+        # Extract optional query parameters
+        role = request.query.get("role")
+        channel = request.query.get("channel")
+        hw_model = request.query.get("hw_model")
+
+        # Fetch filtered nodes
+        nodes = await store.get_nodes(role, channel, hw_model)
+
+        # Convert node objects to dictionaries for JSON output
+        nodes_json = [node.to_dict() for node in nodes]
+
+        # Return a pretty-printed JSON response
+        return web.json_response(
+            {"nodes": nodes_json},
+            dumps=lambda obj: json.dumps(obj, indent=2),  # Pretty print for development
+        )
+
+    except Exception as e:
+        # Log error and stack trace to console
+        print("Error in /api endpoint:", str(e))
+
+        # Return a plain-text error response
+        return web.Response(
+            text=f"An error occurred: {str(e)}", status=500, content_type="text/plain"
+        )
+
+
+# Show basic details about the site on the site
+@routes.get("/config")
+async def get_config(request):
+    try:
+        site = CONFIG.get("site", {})
+        mqtt = CONFIG.get("mqtt", {})
+
+        return web.json_response(
+            {
+                "Server": site.get("domain", ""),
+                "Title": site.get("title", ""),
+                "Message": site.get("message", ""),
+                "MQTT Server": mqtt.get("server", ""),
+                "Topics": json.loads(mqtt.get("topics", "[]")),
+                "Release": SOFTWARE_RELEASE,
+                "Time": datetime.datetime.now().isoformat(),
+            },
+            dumps=lambda obj: json.dumps(obj, indent=2),
+        )
+
+    except (json.JSONDecodeError, TypeError):
+        return web.json_response({"error": "Invalid configuration format"}, status=500)
 
 
 async def run_server():

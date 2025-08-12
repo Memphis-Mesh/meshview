@@ -3,7 +3,7 @@ from sqlalchemy import select
 from meshtastic.protobuf.config_pb2 import Config
 from meshtastic.protobuf.portnums_pb2 import PortNum
 from meshtastic.protobuf.mesh_pb2 import HardwareModel
-from meshview import mqtt_database
+from meshview import database
 from meshview import decode_payload
 from meshview.models import Packet, PacketSeen, Node, Traceroute
 
@@ -22,7 +22,7 @@ async def process_envelope(topic, env):
         )
 
         # Establish an asynchronous database session
-        async with mqtt_database.async_session() as session:
+        async with database.async_session() as session:
             try:
                 hw_model = (
                     HardwareModel.Name(map_report.hw_model)
@@ -76,7 +76,7 @@ async def process_envelope(topic, env):
     if not env.packet.id:
         return
 
-    async with mqtt_database.async_session() as session:
+    async with database.async_session() as session:
         result = await session.execute(select(Packet).where(Packet.id == env.packet.id))
         new_packet = False
         packet = result.scalar_one_or_none()
