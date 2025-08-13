@@ -72,6 +72,12 @@ dependencies = [
     "fonttools~=4.56.0",
     "pycparser~=2.22",
     "kiwisolver~=1.4.8",
+    "fastapi[standard]>=0.116.1",
+    "pydantic>=2.11.7",
+    "pydantic-extra-types>=2.10.5",
+    "pydantic-settings>=2.10.1",
+    "sqlmodel>=0.0.24",
+    "semver>=3.0.4",
 ]
 
 [project.scripts]
