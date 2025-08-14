@@ -1,5 +1,3 @@
-
-
 from meshtastic.protobuf.mqtt_pb2 import ServiceEnvelope
 from ..envelope_audits import service as envelope_audit_service
 from ..envelope_audits import schemas as schemas
