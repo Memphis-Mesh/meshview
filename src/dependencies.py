@@ -1,9 +1,12 @@
-from sqlmodel import Session
-from .database import engine
+from .database import SessionLocal
+
 
 def get_session():
-    with Session(engine) as session:
-        yield session
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 
 # async def valid_post_id(post_id: UUID4) -> dict[str, Any]:

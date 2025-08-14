@@ -1,0 +1,26 @@
+from sqlalchemy.orm import Session
+
+from . import models, schemas
+
+
+def get_node(db: Session, node_id: int):
+    return db.query(models.Node).filter(models.Node.node_id == node_id).first()
+
+def get_nodes(db: Session, skip: int = 0, limit: int = 100):
+    return db.query(models.Node).offset(skip).limit(limit).all()
+
+def create_node(db: Session, node: schemas.Node):
+    db_node = models.Node(node_id=node.node_id,
+                         long_name=node.long_name,
+                         short_name=node.short_name,
+                         hw_model=node.hw_model,
+                         firmware=node.firmware,
+                         role=node.role,
+                         last_lat=node.last_lat,
+                         last_long=node.last_long,
+                         channel=node.channel,
+                         last_update=node.last_update)
+    db.add(db_node)
+    db.commit()
+    db.refresh(db_node)
+    return db_node

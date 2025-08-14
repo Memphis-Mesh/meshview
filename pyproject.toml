@@ -76,7 +76,6 @@ dependencies = [
     "pydantic>=2.11.7",
     "pydantic-extra-types>=2.10.5",
     "pydantic-settings>=2.10.1",
-    "sqlmodel>=0.0.24",
     "semver>=3.0.4",
 ]
 
