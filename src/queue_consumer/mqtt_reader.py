@@ -5,14 +5,17 @@ import random
 import aiomqtt
 from google.protobuf.message import DecodeError
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from meshtastic.protobuf.mesh_pb2 import MeshPacket
 from meshtastic.protobuf.mqtt_pb2 import ServiceEnvelope
+from .service import persist_service_envelope
 
 # TODO: move this to a config value, ideally tied to the channel
 KEY = base64.b64decode("1PG7OiApB1nwvP+rz05pAQ==")
 
-logger = logging.getLogger('uvicorn.error')
+logger = logging.getLogger("uvicorn.error")
 
-def decrypt(packet):
+
+def decrypt(packet: MeshPacket) -> MeshPacket:
     if packet.HasField("decoded"):
         return
     packet_id = packet.id.to_bytes(8, "little")
@@ -28,7 +31,7 @@ def decrypt(packet):
         pass
 
 
-async def get_topic_envelopes(mqtt_server, mqtt_port, topics, mqtt_user, mqtt_passwd):
+async def get_topic_envelopes(mqtt_server: str, mqtt_port: int, topics: list[str], mqtt_user: str | None, mqtt_passwd: str | None):
     identifier = str(random.getrandbits(16))
     while True:
         try:
@@ -47,7 +50,9 @@ async def get_topic_envelopes(mqtt_server, mqtt_port, topics, mqtt_user, mqtt_pa
                     try:
                         envelope = ServiceEnvelope.FromString(msg.payload)
                     except DecodeError:
-                        logger.error(f"Error decoding message from topic {msg.topic.value}, skipping")
+                        logger.error(
+                            f"Error decoding message from topic {msg.topic.value}, skipping"
+                        )
                         continue
 
                     decrypt(envelope.packet)
@@ -58,7 +63,10 @@ async def get_topic_envelopes(mqtt_server, mqtt_port, topics, mqtt_user, mqtt_pa
                     # if getattr(envelope.packet, "from", None) == 2144342101:
                     #     continue
 
-                    logger.info(f"From MQTT topic {msg.topic.value}, received envelope: {envelope}")
+                    logger.info(
+                        f"From MQTT topic {msg.topic.value}, received envelope: {envelope}"
+                    )
+                    persist_service_envelope(envelope)
                     yield msg.topic.value, envelope
 
         except aiomqtt.MqttError as e:

@@ -1,20 +1,10 @@
-from sqlalchemy import Boolean, Column, ForeignKey, Integer, String
-from sqlalchemy.orm import relationship
-
-from ..database import Base
-
 from datetime import datetime
-from sqlalchemy.orm import DeclarativeBase
-from sqlalchemy.ext.asyncio import AsyncAttrs
-from sqlalchemy.orm import mapped_column, relationship, Mapped
-from sqlalchemy import ForeignKey, BigInteger
+from sqlalchemy.orm import mapped_column, Mapped
+from sqlalchemy import BigInteger
+from ..models import ModelBase
 
 
-class Base(AsyncAttrs, DeclarativeBase):
-    pass
-
-
-class Node(Base):
+class Node(ModelBase):
     __tablename__ = "nodes"
     node_id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     long_name: Mapped[str] = mapped_column(nullable=True)

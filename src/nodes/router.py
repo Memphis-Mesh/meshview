@@ -43,10 +43,12 @@ def create_node(node: schemas.Node, db: Session = Depends(get_session)):
         raise HTTPException(status_code=400, detail="Node already registered")
     return service.create_node(db=db, node=node)
 
+
 @router.get("/nodes/", response_model=list[schemas.Node])
 def read_nodes(skip: int = 0, limit: int = 100, db: Session = Depends(get_session)):
     users = service.get_nodes(db, skip=skip, limit=limit)
     return users
+
 
 @router.get("/nodes/{node_id}", response_model=schemas.Node)
 def read_node(node_id: int, db: Session = Depends(get_session)):
