@@ -31,7 +31,13 @@ def decrypt(packet: MeshPacket) -> MeshPacket:
         pass
 
 
-async def get_topic_envelopes(mqtt_server: str, mqtt_port: int, topics: list[str], mqtt_user: str | None, mqtt_passwd: str | None):
+async def get_topic_envelopes(
+    mqtt_server: str,
+    mqtt_port: int,
+    topics: list[str],
+    mqtt_user: str | None,
+    mqtt_passwd: str | None,
+):
     identifier = str(random.getrandbits(16))
     while True:
         try:

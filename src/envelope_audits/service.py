@@ -6,7 +6,9 @@ from . import models, schemas
 
 def get_envelope_audit(db: Session, id: int):
     # TODO: handle unpickling envelope
-    return db.query(models.EnvelopeAudits).filter(models.EnvelopeAudits.id == id).first()
+    return (
+        db.query(models.EnvelopeAudits).filter(models.EnvelopeAudits.id == id).first()
+    )
 
 
 def get_envelope_aduits(db: Session, skip: int = 0, limit: int = 100):
