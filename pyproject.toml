@@ -116,3 +116,7 @@ exclude = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+asyncio_mode = "strict"
+markers = [
+    "asyncio: mark test as async",
+]

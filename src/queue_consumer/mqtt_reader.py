@@ -31,6 +31,30 @@ def decrypt(packet: MeshPacket) -> MeshPacket:
         pass
 
 
+async def create_mqtt_client(
+    mqtt_server: str,
+    mqtt_port: int,
+    mqtt_user: str | None,
+    mqtt_passwd: str | None,
+    identifier: str,
+) -> aiomqtt.Client:
+    """Create and return a configured MQTT client."""
+    return aiomqtt.Client(
+        mqtt_server,
+        port=mqtt_port,
+        username=mqtt_user,
+        password=mqtt_passwd,
+        identifier=identifier,
+    )
+
+
+async def subscribe_to_topics(client: aiomqtt.Client, topics: list[str]) -> None:
+    """Subscribe to the given list of topics."""
+    for topic in topics:
+        logger.info(f"Subscribing to MQTT topic {topic}")
+        await client.subscribe(topic)
+
+
 async def get_topic_envelopes(
     mqtt_server: str,
     mqtt_port: int,
@@ -38,27 +62,22 @@ async def get_topic_envelopes(
     mqtt_user: str | None,
     mqtt_passwd: str | None,
 ):
+    """
+    Connect to MQTT broker and yield processed messages from subscribed topics.
+    Handles reconnection on errors.
+    """
     identifier = str(random.getrandbits(16))
+
     while True:
         try:
-            async with aiomqtt.Client(
-                mqtt_server,
-                port=mqtt_port,
-                username=mqtt_user,
-                password=mqtt_passwd,
-                identifier=identifier,
+            async with await create_mqtt_client(
+                mqtt_server, mqtt_port, mqtt_user, mqtt_passwd, identifier
             ) as client:
-                for topic in topics:
-                    logger.info(f"Subscribing to MQTT topic {topic}")
-                    await client.subscribe(topic)
+                await subscribe_to_topics(client, topics)
 
                 async for msg in client.messages:
-                    try:
-                        envelope = ServiceEnvelope.FromString(msg.payload)
-                    except DecodeError:
-                        logger.error(
-                            f"Error decoding message from topic {msg.topic.value}, skipping"
-                        )
+                    envelope = ServiceEnvelope.FromString(msg.payload)
+                    if not envelope:
                         continue
 
                     decrypt(envelope.packet)
@@ -72,7 +91,10 @@ async def get_topic_envelopes(
                     logger.info(
                         f"From MQTT topic {msg.topic.value}, received envelope: {envelope}"
                     )
-                    persist_service_envelope(envelope)
+                    db_envelope_audit = persist_service_envelope(envelope)
+                    logger.info(
+                        f"Persisted envelope audit with ID {db_envelope_audit.id}"
+                    )
                     yield msg.topic.value, envelope
 
         except aiomqtt.MqttError as e:
