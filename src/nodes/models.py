@@ -1,0 +1,18 @@
+from datetime import datetime
+from sqlalchemy.orm import mapped_column, Mapped
+from sqlalchemy import BigInteger
+from ..models import ModelBase
+
+
+class Node(ModelBase):
+    __tablename__ = "nodes"
+    node_id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    long_name: Mapped[str] = mapped_column(nullable=True)
+    short_name: Mapped[str] = mapped_column(nullable=True)
+    hw_model: Mapped[str] = mapped_column(nullable=True)
+    firmware: Mapped[str] = mapped_column(nullable=True)
+    role: Mapped[str] = mapped_column(nullable=True)
+    last_lat: Mapped[int] = mapped_column(BigInteger, nullable=True)
+    last_long: Mapped[int] = mapped_column(BigInteger, nullable=True)
+    channel: Mapped[str] = mapped_column(nullable=True)
+    last_update: Mapped[datetime] = mapped_column(nullable=True)
