@@ -1,6 +1,6 @@
 from datetime import datetime
 from sqlalchemy.orm import mapped_column, Mapped
-from sqlalchemy import BigInteger, Integer, LargeBinary, DateTime, PickleType
+from sqlalchemy import BigInteger, Integer, DateTime, PickleType
 from ..models import ModelBase
 
 

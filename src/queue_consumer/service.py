@@ -32,7 +32,9 @@ def parse_mqtt_message(payload: bytes, topic: str) -> ServiceEnvelope | None:
         return None
 
 
-def process_envelope(envelope: ServiceEnvelope) -> tuple[schemas.EnvelopeAudits, ServiceEnvelope]:
+def process_envelope(
+    envelope: ServiceEnvelope,
+) -> tuple[schemas.EnvelopeAudits, ServiceEnvelope]:
     """
     Process a ServiceEnvelope by decrypting it and persisting to database.
     Returns the persisted audit record and processed envelope.
