@@ -10,5 +10,5 @@ def persist_service_envelope(envelope_audit: ServiceEnvelope) -> schemas.Envelop
     """
 
     db = SessionLocal()
-    db_envelope_audit = schemas.EvenlopeAuditsCreate(envelope=envelope_audit)
+    db_envelope_audit = schemas.EnvelopeAuditsCreate(envelope=envelope_audit)
     return envelope_audit_service.create_envelope_audit(db, db_envelope_audit)
