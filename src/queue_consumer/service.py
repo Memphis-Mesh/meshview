@@ -4,7 +4,7 @@ from google.protobuf.message import DecodeError
 import logging
 
 from meshtastic.protobuf.portnums_pb2 import PortNum
-from src.positions.schemas import PositionCreate  # Update import
+from src.positions.protobuf_service import convert_position_proto_to_schema
 from ..envelope_audits import service as envelope_audit_service
 from ..envelope_audits import schemas as schemas
 from ..database import SessionLocal
@@ -25,23 +25,8 @@ def persist_service_envelope(envelope_audit: ServiceEnvelope) -> schemas.Envelop
             proto_pos = Position.FromString(envelope_audit.packet.decoded.payload)
             logger.debug(f"Raw position proto fields: {proto_pos.ListFields()}")
             
-            # Extract fields directly from protobuf
-            position_data = {}
-            for field, value in proto_pos.ListFields():
-                if field.name == "location_source":
-                    # Just use the enum name directly without LOC_ prefix
-                    position_data[field.name] = Position.LocSource.Name(value)
-                elif field.name == "altitude_source":
-                    # Just use the enum name directly without ALT_ prefix
-                    position_data[field.name] = Position.AltSource.Name(value)
-                else:
-                    position_data[field.name] = value
-            
-            # Add the node_id
-            position_data["node_id"] = getattr(envelope_audit.packet, "from")
-            
-            logger.debug(f"Creating position with data: {position_data}")
-            position = PositionCreate(**position_data)
+            node_id = getattr(envelope_audit.packet, "from")
+            position = convert_position_proto_to_schema(proto_pos, node_id)
             logger.info(f"Created position from envelope: {position.model_dump_json(indent=2)}")
         except Exception as e:
             logger.error(f"Error processing position: {e}", exc_info=True)
