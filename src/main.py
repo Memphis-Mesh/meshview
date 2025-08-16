@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+import logging
 
 from .models import ModelBase
 
@@ -8,6 +9,16 @@ from .database import engine
 from .queue_consumer import mqtt_reader
 import asyncio
 from .config import settings
+
+
+# Configure root logger
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+
+# Configure specific loggers
+logging.getLogger('src.positions.schemas').setLevel(logging.DEBUG)
 
 
 def create_db_and_tables():

@@ -3,7 +3,7 @@ from pydantic import BaseModel, PositiveInt, Field
 from pydantic_extra_types.coordinate import Latitude, Longitude
 
 
-class Node(BaseModel):
+class NodeBase(BaseModel):
     node_id: PositiveInt = Field(
         lt=2 ** (8 * 4),
         description="Node ID must be a 4 byte unsigned integer by meshtastic convention",
@@ -16,4 +16,8 @@ class Node(BaseModel):
     last_lat: Latitude = Field()
     last_long: Longitude = Field()
     channel: str = Field()
-    last_update: datetime = Field()
+    created_at: datetime = Field()
+    updated_at: datetime = Field()
+
+class Node(NodeBase):
+    pass
