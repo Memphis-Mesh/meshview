@@ -19,5 +19,6 @@ class NodeBase(BaseModel):
     created_at: datetime = Field()
     updated_at: datetime = Field()
 
+
 class Node(NodeBase):
     pass

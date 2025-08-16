@@ -13,12 +13,11 @@ from .config import settings
 
 # Configure root logger
 logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.DEBUG, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 
 # Configure specific loggers
-logging.getLogger('src.positions.schemas').setLevel(logging.DEBUG)
+logging.getLogger("src.positions.schemas").setLevel(logging.DEBUG)
 
 
 def create_db_and_tables():

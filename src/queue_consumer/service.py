@@ -19,18 +19,23 @@ def persist_service_envelope(envelope_audit: ServiceEnvelope) -> schemas.Envelop
     db = SessionLocal()
     envelope_model = schemas.ServiceEnvelopeModel(__root__=envelope_audit)
     db_envelope_audit = schemas.EnvelopeAuditsCreate(envelope=envelope_model)
-    
-    if envelope_audit.packet.HasField("decoded") and envelope_audit.packet.decoded.portnum == PortNum.POSITION_APP:
+
+    if (
+        envelope_audit.packet.HasField("decoded")
+        and envelope_audit.packet.decoded.portnum == PortNum.POSITION_APP
+    ):
         try:
             proto_pos = Position.FromString(envelope_audit.packet.decoded.payload)
             logger.debug(f"Raw position proto fields: {proto_pos.ListFields()}")
-            
+
             node_id = getattr(envelope_audit.packet, "from")
             position = convert_position_proto_to_schema(proto_pos, node_id)
-            logger.info(f"Created position from envelope: {position.model_dump_json(indent=2)}")
+            logger.info(
+                f"Created position from envelope: {position.model_dump_json(indent=2)}"
+            )
         except Exception as e:
             logger.error(f"Error processing position: {e}", exc_info=True)
-    
+
     return envelope_audit_service.create_envelope_audit(db, db_envelope_audit)
 
 

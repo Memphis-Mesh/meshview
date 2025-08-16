@@ -7,14 +7,16 @@ from pydantic_extra_types.coordinate import Latitude, Longitude
 
 class LocSource(str, Enum):
     """Location source types"""
+
     LOC_UNSET = "LOC_UNSET"
-    LOC_MANUAL = "LOC_MANUAL" 
+    LOC_MANUAL = "LOC_MANUAL"
     LOC_INTERNAL = "LOC_INTERNAL"
     LOC_EXTERNAL = "LOC_EXTERNAL"
 
 
 class AltSource(str, Enum):
     """Altitude source types"""
+
     ALT_UNSET = "ALT_UNSET"
     ALT_MANUAL = "ALT_MANUAL"
     ALT_INTERNAL = "ALT_INTERNAL"
@@ -24,6 +26,7 @@ class AltSource(str, Enum):
 
 class ProtoPositionModel(BaseModel):
     """Base position model"""
+
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     latitude: Optional[Latitude] = Field(None)
@@ -48,18 +51,22 @@ class ProtoPositionModel(BaseModel):
     seq_number: int = Field(default=0)
     precision_bits: int = Field(default=0)
 
+
 # Base model for database operations
 class PositionBase(ProtoPositionModel):
     """Base model for Position with added database fields"""
+
     created_at: datetime = Field(default_factory=datetime.utcnow)
     node_id: int = Field(description="ID of the node that reported this position")
 
 
 class PositionCreate(PositionBase):
     """Schema for creating a new position record (before database insertion)"""
+
     pass
 
 
 class Position(PositionBase):
     """Schema for position records after database insertion"""
+
     id: int = Field(description="Database record ID")
