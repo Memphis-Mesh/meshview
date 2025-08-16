@@ -2,6 +2,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Optional
 from pydantic import BaseModel, ConfigDict, Field
+from pydantic_extra_types.coordinate import Latitude, Longitude
 
 
 class LocSource(str, Enum):
@@ -25,10 +26,10 @@ class ProtoPositionModel(BaseModel):
     """Base position model"""
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    latitude_i: Optional[int] = Field(None)
-    longitude_i: Optional[int] = Field(None)
+    latitude: Optional[Latitude] = Field(None)
+    longitude: Optional[Longitude] = Field(None)
     altitude: Optional[int] = Field(None)
-    time: int = Field(default=0)
+    time: Optional[datetime] = Field(None)
     location_source: LocSource = Field(default=LocSource.LOC_UNSET)
     altitude_source: AltSource = Field(default=AltSource.ALT_UNSET)
     timestamp: int = Field(default=0)
