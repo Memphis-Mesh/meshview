@@ -1,22 +1,22 @@
 FROM astral/uv:python3.12-bookworm-slim
 
-# Install dependencies
+# Install system dependencies
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    graphviz \
+    apt-get install -y --no-install-recommends graphviz \
     && rm -rf /var/lib/apt/lists/*
 
-# Set the working directory
+# Set working directory
 WORKDIR /app
-# Copy project to the build context
+
+# Copy the full project including submodules
 COPY . ./
 
-# Run uv's make script to install dependencies and set up the environment
-RUN uv sync
+# Install Python dependencies + meshtastic-python submodule
+RUN uv sync \
+ && uv pip install -e ./meshtastic-python
 
+# Expose port
 EXPOSE ${CONTAINER_WEB_PORT:-8081}
 
-# Config file should be mounted at /etc/meshview/config.ini
-VOLUME ["/etc/meshview"]
-
+# Start the app with config
 CMD ["uv", "run", "meshview-run", "--config", "/etc/meshview/config.ini"]
