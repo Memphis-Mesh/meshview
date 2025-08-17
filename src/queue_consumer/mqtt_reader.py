@@ -7,7 +7,7 @@ from google.protobuf.message import DecodeError
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from meshtastic.protobuf.mesh_pb2 import MeshPacket
 from meshtastic.protobuf.mqtt_pb2 import ServiceEnvelope
-from .service import persist_service_envelope
+from .service import process_envelope
 
 # TODO: move this to a config value, ideally tied to the channel
 KEY = base64.b64decode("1PG7OiApB1nwvP+rz05pAQ==")
@@ -91,11 +91,12 @@ async def get_topic_envelopes(
                     logger.info(
                         f"From MQTT topic {msg.topic.value}, received envelope: {envelope}"
                     )
-                    db_envelope_audit = persist_service_envelope(envelope)
-                    logger.info(
-                        f"Persisted envelope audit with ID {db_envelope_audit.id}"
-                    )
-                    yield msg.topic.value, envelope
+                    audit_record, processed_envelope = process_envelope(envelope)
+                    if audit_record:
+                        logger.info(
+                            f"Persisted envelope audit with ID {audit_record.id}"
+                        )
+                    yield msg.topic.value, processed_envelope
 
         except aiomqtt.MqttError as e:
             logger.error(f"MQTT error: {e}, reconnecting in 1s...")

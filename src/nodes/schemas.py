@@ -1,6 +1,8 @@
 from datetime import datetime
+from typing import Optional
 from pydantic import BaseModel, PositiveInt, Field
-from pydantic_extra_types.coordinate import Latitude, Longitude
+
+from ..positions.schemas import Position
 
 
 class NodeBase(BaseModel):
@@ -8,17 +10,22 @@ class NodeBase(BaseModel):
         lt=2 ** (8 * 4),
         description="Node ID must be a 4 byte unsigned integer by meshtastic convention",
     )
-    long_name: str = Field()
-    short_name: str = Field(max_length=4)
-    hw_model: str = Field()
-    firmware: str = Field()
-    role: str = Field()  # todo: replace this with a meshtastic enum
-    last_lat: Latitude = Field()
-    last_long: Longitude = Field()
-    channel: str = Field()
-    created_at: datetime = Field()
-    updated_at: datetime = Field()
+    long_name: Optional[str] = None
+    short_name: Optional[str] = None
+    hw_model: Optional[str] = None
+    firmware: Optional[str] = None
+    role: Optional[str] = None
+    channel: Optional[str] = None
+    last_heard: datetime
 
+
+class NodeCreate(NodeBase):
+    pass
 
 class Node(NodeBase):
-    pass
+    positions: list[Position] = []
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True  # newer pydantic v2 syntax instead of orm_mode

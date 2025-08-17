@@ -58,7 +58,8 @@ class PositionBase(ProtoPositionModel):
 
     created_at: datetime = Field(default_factory=datetime.utcnow)
     node_id: int = Field(description="ID of the node that reported this position")
-
+    class Config:
+        orm_mode = True
 
 class PositionCreate(PositionBase):
     """Schema for creating a new position record (before database insertion)"""

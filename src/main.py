@@ -5,6 +5,7 @@ from .models import ModelBase
 
 from .nodes import router as NodesRouter
 from .envelope_audits import router as EnvelopeAuditsRouter
+from .positions import router as PositionsRouter
 from .database import engine
 from .queue_consumer import mqtt_reader
 import asyncio
@@ -27,7 +28,9 @@ def create_db_and_tables():
 app = FastAPI()
 
 app.include_router(NodesRouter.router)
+app.include_router(PositionsRouter.router)
 app.include_router(EnvelopeAuditsRouter.router)
+app.include_router(PositionsRouter.router)
 
 
 async def consume_messages() -> None:
