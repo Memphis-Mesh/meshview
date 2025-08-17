@@ -3,6 +3,7 @@ from sqlalchemy.orm import mapped_column, Mapped, relationship
 from sqlalchemy import BigInteger, Integer, ForeignKey
 from ..models import ModelBase
 
+
 class Position(ModelBase):
     __tablename__ = "positions"
     id: Mapped[int] = mapped_column(

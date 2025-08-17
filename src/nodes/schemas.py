@@ -22,6 +22,7 @@ class NodeBase(BaseModel):
 class NodeCreate(NodeBase):
     pass
 
+
 class Node(NodeBase):
     positions: list[Position] = []
     created_at: datetime

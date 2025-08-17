@@ -25,4 +25,6 @@ class Node(ModelBase):
     last_heard: Mapped[datetime] = mapped_column(
         default=datetime.utcnow, nullable=False
     )
-    positions: Mapped[list["Position"]] = relationship("Position", back_populates="owner")
+    positions: Mapped[list["Position"]] = relationship(
+        "Position", back_populates="owner"
+    )

@@ -12,10 +12,7 @@ def get_nodes(db: Session, skip: int = 0, limit: int = 100):
 
 
 def create_node(db: Session, node: schemas.Node):
-    db_node = models.Node(
-        node_id=node.node_id,
-        last_heard=node.last_heard
-    )
+    db_node = models.Node(node_id=node.node_id, last_heard=node.last_heard)
     # Only set optional fields if they have values
     if node.long_name is not None:
         db_node.long_name = node.long_name
@@ -29,7 +26,7 @@ def create_node(db: Session, node: schemas.Node):
         db_node.role = node.role
     if node.channel is not None:
         db_node.channel = node.channel
-        
+
     db.add(db_node)
     db.commit()
     db.refresh(db_node)
@@ -58,10 +55,7 @@ def upsert_node(db: Session, node: schemas.Node):
                 setattr(db_node, key, value)
     else:
         # Create new node with required fields
-        db_node = models.Node(
-            node_id=node.node_id,
-            last_heard=node.last_heard
-        )
+        db_node = models.Node(node_id=node.node_id, last_heard=node.last_heard)
         # Set optional fields if they exist
         if node.long_name is not None:
             db_node.long_name = node.long_name
@@ -75,7 +69,7 @@ def upsert_node(db: Session, node: schemas.Node):
             db_node.role = node.role
         if node.channel is not None:
             db_node.channel = node.channel
-            
+
         db.add(db_node)
 
     db.commit()

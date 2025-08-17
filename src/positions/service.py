@@ -6,8 +6,13 @@ from . import models
 def get_positions(db: Session, node_id: int = None, skip: int = 0, limit: int = 100):
     query = db.query(models.Position)
     if node_id is not None:
-        query = query.order_by(models.Position.timestamp.desc()).filter(models.Position.node_id == node_id)
-    return query.order_by(models.Position.timestamp.desc()).offset(skip).limit(limit).all()
+        query = query.order_by(models.Position.timestamp.desc()).filter(
+            models.Position.node_id == node_id
+        )
+    return (
+        query.order_by(models.Position.timestamp.desc()).offset(skip).limit(limit).all()
+    )
+
 
 # def create_node(db: Session, node: schemas.Node):
 #     db_node = models.Node(

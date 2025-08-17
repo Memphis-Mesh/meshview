@@ -67,8 +67,7 @@ def process_envelope(
     # Handle node tracking if FROM address exists
     if hasattr(envelope.packet, "from"):
         node = node_schemas.NodeCreate(
-            node_id=getattr(envelope.packet, "from"),
-            last_heard=datetime.utcnow()
+            node_id=getattr(envelope.packet, "from"), last_heard=datetime.utcnow()
         )
         node_service.upsert_node(db, node)
         logger.info(f"Upserted node with ID {node.node_id} last heard timestamp")
