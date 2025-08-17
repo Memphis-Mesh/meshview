@@ -29,4 +29,4 @@ class Node(NodeBase):
     updated_at: datetime
 
     class Config:
-        from_attributes = True  # newer pydantic v2 syntax instead of orm_mode
+        from_attributes = True

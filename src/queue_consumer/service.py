@@ -1,10 +1,12 @@
 from meshtastic.protobuf.mesh_pb2 import Position
 from meshtastic.protobuf.mqtt_pb2 import ServiceEnvelope
 from google.protobuf.message import DecodeError
+from sqlalchemy.orm import Session
 import logging
 
 from meshtastic.protobuf.portnums_pb2 import PortNum
-from src.positions.protobuf_service import convert_position_proto_to_schema
+from ..positions.protobuf_service import convert_position_proto_to_schema
+from ..positions import service as position_service
 from ..envelope_audits import service as envelope_audit_service
 from ..envelope_audits import schemas as schemas
 from ..nodes import service as node_service
@@ -15,7 +17,7 @@ from datetime import datetime
 logger = logging.getLogger("uvicorn.error")
 
 
-def handle_position_packet(envelope_audit: ServiceEnvelope) -> None:
+def handle_position_packet(db: Session, envelope_audit: ServiceEnvelope) -> None:
     """
     Handle a position packet from a ServiceEnvelope by converting and persisting the position data.
     """
@@ -27,6 +29,10 @@ def handle_position_packet(envelope_audit: ServiceEnvelope) -> None:
         position = convert_position_proto_to_schema(proto_pos, node_id)
         logger.info(
             f"Created position from envelope: {position.model_dump_json(indent=2)}"
+        )
+        created_position = position_service.create_position(db, position)
+        logger.info(
+            f"Persisted position with ID {created_position.id} for node {node_id}"
         )
     except Exception as e:
         logger.error(f"Error processing position: {e}", exc_info=True)
@@ -76,7 +82,7 @@ def process_envelope(
     db_envelope_audit = schemas.EnvelopeAuditsCreate(envelope=envelope_model)
 
     if envelope.packet.decoded.portnum == PortNum.POSITION_APP:
-        handle_position_packet(envelope)
+        handle_position_packet(db, envelope)
 
     audit_record = envelope_audit_service.create_envelope_audit(db, db_envelope_audit)
     logger.info(f"Persisted envelope audit with ID {audit_record.id}")

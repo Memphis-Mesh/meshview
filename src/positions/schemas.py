@@ -60,7 +60,7 @@ class PositionBase(ProtoPositionModel):
     node_id: int = Field(description="ID of the node that reported this position")
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class PositionCreate(PositionBase):
